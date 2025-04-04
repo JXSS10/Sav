@@ -1,4 +1,4 @@
-import asyncio
+Import asyncio
 import time
 import os
 import re
@@ -9,7 +9,7 @@ from devgagan import sex as gf
 from telethon.tl.types import DocumentAttributeVideo
 import pymongo
 from pyrogram import Client, filters
-from pyrogram.errors import ChannelBanned, ChannelInvalid, ChannelPrivate, ChatIdInvalid, ChatInvalid, PeerIdInvalid
+from pyrogram.errors import ChannelBanned, ChannelInvalid, ChannelPrivate, ChatIdInvalid, ChatInvalid, PeerIdInvalid, UserNotParticipant
 from pyrogram.enums import MessageMediaType
 from devgagan.core.func import progress_bar, video_metadata, screenshot, chk_user, progress_callback, prog_bar
 from devgagan.core.mongo import db
@@ -57,19 +57,30 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
         else:
             chat = msg_link.split("/")[-2]
         if chat in saved_channel_ids:
-            await app.edit_message_text(message.chat.id, edit_id, "Sorry! dude 😎 This channel is protected 🔐 by **__Team SPY__**")
+            await app.edit_message_text(message.chat.id, edit_id, "Sorry! dude 😎 This channel is protected 🔐 by **__Team X_XF8__**")
             return
         file = ""
         try:
             size_limit = 2 * 1024 * 1024 * 1024
             chatx = message.chat.id
-            msg = await userbot.get_messages(chat, msg_id)
+            # Check if bot is a member of the channel
+            try:
+                bot_member = await app.get_chat_member(chat, app.me.id)
+                is_bot_member = True # Bot is a member
+            except UserNotParticipant:
+                is_bot_member = False # Bot is not a member
+
+            if is_bot_member:
+                msg = await app.get_messages(chat, msg_id) # Use bot's client to get message
+            else:
+                msg = await userbot.get_messages(chat, msg_id) # Use userbot to get message
+
             target_chat_id = user_chat_ids.get(chatx, chatx)
             freecheck = await chk_user(message, sender)
             verified = await is_user_verified(sender)
             original_caption = msg.caption if msg.caption else ''
             custom_caption = get_user_caption_preference(sender)
-            final_caption = f"{original_caption}" if custom_caption else f"{original_caption}"       
+            final_caption = f"{original_caption}" if custom_caption else f"{original_caption}"
             replacements = load_replacement_words(sender)
             for word, replace_word in replacements.items():
                 final_caption = final_caption.replace(word, replace_word)
@@ -78,7 +89,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
             upload_method = await fetch_upload_method(sender)
             delete_words = load_delete_words(chatx)
             if msg.service is not None:
-                return None 
+                return None
             if msg.empty is not None:
                 return None
             if msg.document:
@@ -102,7 +113,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                             await devgaganin.pin(both_sides=True)
                         except Exception as e:
                             await devgaganin.pin()
-                    await devgaganin.copy(LOG_GROUP)                  
+                    await devgaganin.copy(LOG_GROUP)
                     await edit.delete()
                     return
             if not msg.media:
@@ -119,17 +130,27 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                     await edit.delete()
                     return
             edit = await app.edit_message_text(sender, edit_id, "Trying to Download...")
-            file = await userbot.download_media(
-                msg,
-                progress=progress_bar,
-                progress_args=("╭─────────────────────╮\n│      **__Downloading__...**\n├─────────────────────",edit,time.time()))
+
+            # Use correct client based on bot membership
+            if is_bot_member:
+                file = await app.download_media(
+                    msg,
+                    progress=progress_bar,
+                    progress_args=("╭─────────────────────╮\n│      **__Downloading__...**\n├─────────────────────",edit,time.time()))
+            else:
+                file = await userbot.download_media(
+                    msg,
+                    progress=progress_bar,
+                    progress_args=("╭─────────────────────╮\n│      **__Downloading__...**\n├─────────────────────",edit,time.time()))
+
+
             last_dot_index = str(file).rfind('.')
             if last_dot_index != -1 and last_dot_index != 0:
                 ggn_ext = str(file)[last_dot_index + 1:]
                 if ggn_ext.isalpha() and len(ggn_ext) <= 9:
                     if ggn_ext.lower() in VIDEO_EXTENSIONS:
                         original_file_name = str(file)[:last_dot_index]
-                        file_extension = 'mp4'                 
+                        file_extension = 'mp4'
                     else:
                         original_file_name = str(file)[:last_dot_index]
                         file_extension = ggn_ext
@@ -162,7 +183,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                         height= metadata['height']
                         duration= metadata['duration']
                         dm = await pro.send_video(
-                            LOG_GROUP, 
+                            LOG_GROUP,
                             video=file,
                             caption=caption,
                             thumb=thumb_path,
@@ -183,7 +204,7 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                         await app.copy_message(sender, from_chat, mg_id)
                     else:
                         dm = await pro.send_document(
-                            LOG_GROUP, 
+                            LOG_GROUP,
                             document=file,
                             caption=caption,
                             thumb=thumb_path,
@@ -204,8 +225,8 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 finally:
                     await edit.delete()
                     os.remove(file)
-                    return  
-            if msg.media == MessageMediaType.VIDEO and msg.video.mime_type in ["video/mp4", "video/x-matroska"]:               
+                    return
+            if msg.media == MessageMediaType.VIDEO and msg.video.mime_type in ["video/mp4", "video/x-matroska"]:
                 thumb_path = await screenshot(file, duration, chatx)
                 upload_method = await fetch_upload_method(sender)
                 try:
@@ -231,10 +252,10 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                         await edit.delete()
                         progress_message = await gf.send_message(sender, "__**Uploading ...**__")
                         uploaded = await fast_upload(
-                                gf, file, 
-                                reply=progress_message,                 
-                                name=None,                
-                                progress_bar_function=lambda done, total: progress_callback(done, total, sender)                
+                                gf, file,
+                                reply=progress_message,
+                                name=None,
+                                progress_bar_function=lambda done, total: progress_callback(done, total, sender)
                         )
                         await gf.send_file(
                             target_chat_id,
@@ -253,15 +274,15 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                 except:
                     try:
                         await app.edit_message_text(sender, edit_id, "The bot is not an admin in the specified chat...")
-                    except: 
+                    except:
                         await progress_message.edit("Bot is unable to send message to you or specified chat check if it admin or not")
                 os.remove(file)
             elif msg.media == MessageMediaType.PHOTO:
                 await edit.edit("**Uploading photo...")
-                devgaganin = await app.send_photo(chat_id=target_chat_id, photo=file, caption=caption)              
+                devgaganin = await app.send_photo(chat_id=target_chat_id, photo=file, caption=caption)
                 await devgaganin.copy(LOG_GROUP)
             else:
-                try:                    
+                try:
                     if upload_method == "Pyrogram":
                             devgaganin = await app.send_document(
                             chat_id=target_chat_id,
@@ -280,11 +301,11 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
                             await edit.delete()
                             progress_message = await gf.send_message(sender, "Uploading ...")
                             uploaded = await fast_upload(
-                                gf, 
-                                file, 
-                                reply=progress_message,                 
-                                name=None,                
-                                progress_bar_function=lambda done, total: progress_callback(done, total, sender)                
+                                gf,
+                                file,
+                                reply=progress_message,
+                                name=None,
+                                progress_bar_function=lambda done, total: progress_callback(done, total, sender)
                             )
                             await gf.send_file(
                             target_chat_id,
@@ -306,12 +327,12 @@ async def get_msg(userbot, sender, edit_id, msg_link, i, message):
             return
         except Exception as e:
             print(f"Errrrror {e}")
-            await edit.delete()    
+            await edit.delete()
     else:
         edit = await app.edit_message_text(sender, edit_id, "Cloning...")
         try:
             chat = msg_link.split("/")[-2]
-            await copy_message_with_chat_id(app, sender, chat, msg_id) 
+            await copy_message_with_chat_id(app, sender, chat, msg_id)
             await edit.delete()
         except Exception as e:
             await app.edit_message_text(sender, edit_id, f'Failed to save: `{msg_link}`\n\nError: {str(e)}')
@@ -321,14 +342,14 @@ async def copy_message_with_chat_id(client, sender, chat_id, message_id):
         msg = await client.get_messages(chat_id, message_id)
         custom_caption = get_user_caption_preference(sender)
         original_caption = msg.caption if msg.caption else ''
-        final_caption = f"{original_caption}" if custom_caption else f"{original_caption}"        
+        final_caption = f"{original_caption}" if custom_caption else f"{original_caption}"
         delete_words = load_delete_words(sender)
         for word in delete_words:
-            final_caption = final_caption.replace(word, '  ')       
+            final_caption = final_caption.replace(word, '  ')
         replacements = load_replacement_words(sender)
         for word, replace_word in replacements.items():
-            final_caption = final_caption.replace(word, replace_word)    
-        caption = f"{final_caption}\n\n__**{custom_caption}**__" if custom_caption else f"{final_caption}"  
+            final_caption = final_caption.replace(word, replace_word)
+        caption = f"{final_caption}\n\n__**{custom_caption}**__" if custom_caption else f"{final_caption}"
         if msg.media:
             if msg.media == MessageMediaType.VIDEO:
                 result = await client.send_video(target_chat_id, msg.video.file_id, caption=caption)
@@ -398,7 +419,7 @@ def load_user_session(sender_id):
 async def set_rename_command(user_id, custom_rename_tag):
     user_rename_preferences[str(user_id)] = custom_rename_tag
 def get_user_rename_preference(user_id):
-    return user_rename_preferences.get(str(user_id), 'Team SPY')
+    return user_rename_preferences.get(str(user_id), 'Team X_XF8')
 async def set_caption_command(user_id, custom_caption):
     user_caption_preferences[str(user_id)] = custom_caption
 def get_user_caption_preference(user_id):
@@ -415,7 +436,7 @@ async def settings_command(event):
         [Button.inline("Session Login", b'addsession'), Button.inline("Logout", b'logout')],
         [Button.inline("Set Thumbnail", b'setthumb'), Button.inline("Remove Thumbnail", b'remthumb')],
         [Button.inline("Upload Method", b'uploadmethod')],
-        [Button.url("Report Errors", "https://t.me/team_spy_pro")]
+        [Button.url("Report Errors", "https://t.me/X_XF8")]
     ]
     await gf.send_file(
         event.chat_id,
@@ -464,13 +485,13 @@ async def callback_query_handler(event):
             [Button.inline(f"Pyrogram v2{pyrogram_check}", b'pyrogram')],
             [Button.inline(f"SpyLib v1 ⚡{spylib_check}", b'spylib')]
         ]
-        await event.edit("Choose your preferred upload method:\n\n__**Note:** **SpyLib ⚡**, built on Telethon(base), by Team SPY still in beta.__", buttons=buttons)
+        await event.edit("Choose your preferred upload method:\n\n__**Note:** **X_XF8 ⚡**, built on Telethon(base), by Team X_XF8 still in beta.__", buttons=buttons)
     elif event.data == b'pyrogram':
         save_user_upload_method(user_id, "Pyrogram")
         await event.edit("Upload method set to **Pyrogram** ✅")
     elif event.data == b'spylib':
         save_user_upload_method(user_id, "SpyLib")
-        await event.edit("Upload method set to **SpyLib ⚡\n\nThanks for choosing this library as it will help me to analyze the error raise issues on github.** ✅")        
+        await event.edit("Upload method set to **X_XF8 ⚡\n\nThanks for choosing this library as it will help me to analyze the error raise issues on @X_XF8.** ✅")
     elif event.data == b'reset':
         try:
             user_id_str = str(user_id)
@@ -491,7 +512,7 @@ async def callback_query_handler(event):
                     "watermark_text": "",
                     "duration_limit": ""
                 }}
-            )            
+            )
             user_chat_ids.pop(user_id, None)
             user_rename_preferences.pop(user_id_str, None)
             user_caption_preferences.pop(user_id_str, None)
@@ -509,7 +530,7 @@ async def callback_query_handler(event):
             await event.respond("No thumbnail found to remove.")
 @gf.on(events.NewMessage(func=lambda e: e.sender_id in pending_photos))
 async def save_thumbnail(event):
-    user_id = event.sender_id 
+    user_id = event.sender_id
     if event.photo:
         temp_path = await event.download_media()
         if os.path.exists(f'{user_id}.jpg'):
@@ -523,7 +544,7 @@ def save_user_upload_method(user_id, method):
     collection.update_one(
         {'user_id': user_id},
         {'$set': {'upload_method': method}},
-        upsert=True 
+        upsert=True
     )
 @gf.on(events.NewMessage)
 async def handle_user_input(event):
@@ -568,7 +589,7 @@ async def handle_user_input(event):
             delete_words = load_delete_words(user_id)
             delete_words.update(words_to_delete)
             save_delete_words(user_id, delete_words)
-            await event.respond(f"Words added to delete list: {', '.join(words_to_delete)}")     
+            await event.respond(f"Words added to delete list: {', '.join(words_to_delete)}")
         del sessions[user_id]
 def load_saved_channel_ids():
     saved_channel_ids = set()
@@ -619,7 +640,7 @@ def progress_callback(done, total, user_id):
     remaining_time_min = remaining_time / 60
     final = (
         f"╭──────────────────╮\n"
-        f"│     **__SpyLib ⚡ Uploader__**       \n"
+        f"│     **__X_XF8 ⚡ Uploader__**       \n"
         f"├──────────\n"
         f"│ {progress_bar}\n\n"
         f"│ **__Progress:__** {percent:.2f}%\n"
@@ -627,7 +648,7 @@ def progress_callback(done, total, user_id):
         f"│ **__Speed:__** {speed_mbps:.2f} Mbps\n"
         f"│ **__ETA:__** {remaining_time_min:.2f} min\n"
         f"╰──────────────────╯\n\n"
-        f"**__Powered by Team SPY__**"
+        f"**__Powered by Team X_XF8__**"
     )
     user_data['previous_done'] = done
     user_data['previous_time'] = time.time()
